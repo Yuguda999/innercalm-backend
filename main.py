@@ -17,7 +17,8 @@ from routers import (
     emotions_router,
     recommendations_router,
     users_router,
-    analytics_router
+    analytics_router,
+    trauma_mapping_router
 )
 
 # Configure logging
@@ -35,7 +36,7 @@ async def lifespan(app: FastAPI):
     logger.info("Starting InnerCalm API...")
     try:
         # Import all models to ensure they're registered
-        from models import user, conversation, emotion, recommendation, analytics
+        from models import user, conversation, emotion, recommendation, analytics, trauma_mapping
 
         # Create database tables
         create_tables()
@@ -124,6 +125,7 @@ app.include_router(emotions_router)
 app.include_router(recommendations_router)
 app.include_router(users_router)
 app.include_router(analytics_router)
+app.include_router(trauma_mapping_router)
 
 
 # Request logging middleware

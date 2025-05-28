@@ -6,7 +6,8 @@ python3 scripts/switch_env.py switch development
 
 if [ $? -eq 0 ]; then
     echo "🚀 Starting development server..."
-    python3 main.py
+    # Activate virtual environment and run the server
+    source venv/bin/activate && python main.py
 else
     echo "❌ Failed to switch to development environment"
     exit 1

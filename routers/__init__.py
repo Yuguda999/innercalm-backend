@@ -7,6 +7,7 @@ from .emotions import router as emotions_router
 from .recommendations import router as recommendations_router
 from .users import router as users_router
 from .analytics import router as analytics_router
+from .trauma_mapping import router as trauma_mapping_router
 
 __all__ = [
     "auth_router",
@@ -14,5 +15,6 @@ __all__ = [
     "emotions_router",
     "recommendations_router",
     "users_router",
-    "analytics_router"
+    "analytics_router",
+    "trauma_mapping_router"
 ]

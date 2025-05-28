@@ -20,34 +20,39 @@ class RecommendationType(PyEnum):
 
 class Recommendation(Base):
     """Recommendation model for storing personalized healing suggestions."""
-    
+
     __tablename__ = "recommendations"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    
+
     # Recommendation details
     type = Column(Enum(RecommendationType), nullable=False)
     title = Column(String, nullable=False)
     description = Column(Text, nullable=False)
     instructions = Column(Text, nullable=False)
-    
+
+    # Visual content
+    image_url = Column(String, nullable=True)  # URL to illustration/image
+    gif_url = Column(String, nullable=True)  # URL to animated GIF (for exercises)
+    illustration_prompt = Column(Text, nullable=True)  # Prompt used for AI generation
+
     # Personalization data
     target_emotions = Column(JSON, nullable=False)  # Emotions this recommendation targets
     difficulty_level = Column(Integer, default=1)  # 1-5 scale
     estimated_duration = Column(Integer, nullable=True)  # Duration in minutes
-    
+
     # Recommendation metadata
     is_completed = Column(Boolean, default=False)
     effectiveness_rating = Column(Integer, nullable=True)  # 1-5 user rating
     notes = Column(Text, nullable=True)  # User notes about the recommendation
-    
+
     # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     completed_at = Column(DateTime(timezone=True), nullable=True)
-    
+
     # Relationships
     user = relationship("User", back_populates="recommendations")
-    
+
     def __repr__(self):
         return f"<Recommendation(id={self.id}, user_id={self.user_id}, type='{self.type.value}', title='{self.title}')>"

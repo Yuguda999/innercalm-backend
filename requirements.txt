@@ -24,6 +24,12 @@ torch>=2.0.0
 numpy>=1.21.0
 scikit-learn>=1.2.0
 
+# LangChain and LangGraph for agentic AI
+langchain>=0.1.0
+langchain-openai>=0.0.5
+langgraph>=0.0.20
+typing-extensions>=4.8.0
+
 # Text processing
 textblob==0.17.1
 vaderSentiment==3.3.2

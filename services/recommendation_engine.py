@@ -10,14 +10,18 @@ from sqlalchemy.orm import Session
 from models.recommendation import Recommendation, RecommendationType
 from models.emotion import EmotionAnalysis, EmotionPattern
 from models.user import User
+from services.svg_generator import SVGGenerator
 
 logger = logging.getLogger(__name__)
 
 
 class RecommendationEngine:
     """Engine for generating personalized healing recommendations."""
-    
+
     def __init__(self):
+        # Initialize SVG generator
+        self.svg_generator = SVGGenerator()
+
         # Recommendation templates organized by emotion and type
         self.recommendations = {
             "sadness": {
@@ -101,38 +105,38 @@ class RecommendationEngine:
                 ]
             }
         }
-    
+
     def generate_recommendations(
-        self, 
-        db: Session, 
-        user_id: int, 
+        self,
+        db: Session,
+        user_id: int,
         emotion_analysis: Optional[Dict] = None,
         limit: int = 3
     ) -> List[Dict]:
         """
         Generate personalized recommendations based on user's emotional state.
-        
+
         Args:
             db: Database session
             user_id: User ID
             emotion_analysis: Current emotion analysis data
             limit: Maximum number of recommendations to generate
-            
+
         Returns:
             List of recommendation dictionaries
         """
         try:
             recommendations = []
-            
+
             # Determine target emotions
             target_emotions = self._identify_target_emotions(db, user_id, emotion_analysis)
-            
+
             # Generate recommendations for each target emotion
             for emotion in target_emotions[:limit]:
                 rec = self._create_recommendation(emotion, user_id)
                 if rec:
                     recommendations.append(rec)
-            
+
             # Fill remaining slots with general recommendations if needed
             while len(recommendations) < limit:
                 general_rec = self._create_recommendation("general", user_id)
@@ -140,66 +144,67 @@ class RecommendationEngine:
                     recommendations.append(general_rec)
                 else:
                     break
-            
+
             return recommendations
-            
+
         except Exception as e:
             logger.error(f"Error generating recommendations: {e}")
             return []
-    
+
     def _identify_target_emotions(
-        self, 
-        db: Session, 
-        user_id: int, 
+        self,
+        db: Session,
+        user_id: int,
         emotion_analysis: Optional[Dict]
     ) -> List[str]:
         """Identify which emotions to target with recommendations."""
         target_emotions = []
-        
+
         # Use current emotion analysis if available
         if emotion_analysis:
             emotions = ["sadness", "anger", "fear", "joy"]
             for emotion in emotions:
                 if emotion_analysis.get(emotion, 0) > 0.5:
                     target_emotions.append(emotion)
-        
+
         # If no strong emotions detected, look at recent patterns
         if not target_emotions:
             recent_analyses = db.query(EmotionAnalysis).filter(
                 EmotionAnalysis.user_id == user_id,
                 EmotionAnalysis.analyzed_at >= datetime.utcnow() - timedelta(days=7)
             ).all()
-            
+
             if recent_analyses:
                 emotion_averages = {
                     "sadness": sum(a.sadness for a in recent_analyses) / len(recent_analyses),
                     "anger": sum(a.anger for a in recent_analyses) / len(recent_analyses),
                     "fear": sum(a.fear for a in recent_analyses) / len(recent_analyses)
                 }
-                
+
                 # Target emotions with highest averages
                 sorted_emotions = sorted(emotion_averages.items(), key=lambda x: x[1], reverse=True)
                 target_emotions = [emotion for emotion, score in sorted_emotions if score > 0.3]
-        
+
         # Default to general if no specific emotions identified
         if not target_emotions:
             target_emotions = ["general"]
-        
+
         return target_emotions
-    
+
     def _create_recommendation(self, emotion: str, user_id: int) -> Optional[Dict]:
         """Create a recommendation for a specific emotion."""
         try:
             emotion_recs = self.recommendations.get(emotion, {})
             if not emotion_recs:
                 return None
-            
+
             # Randomly select a recommendation type
             rec_type = random.choice(list(emotion_recs.keys()))
             templates = emotion_recs[rec_type]
             template = random.choice(templates)
-            
-            return {
+
+            # Create base recommendation data
+            recommendation_data = {
                 "user_id": user_id,
                 "type": rec_type,
                 "title": template["title"],
@@ -209,7 +214,18 @@ class RecommendationEngine:
                 "difficulty_level": 1,  # Default to easy
                 "estimated_duration": template.get("duration", 15)
             }
-            
+
+            # Generate SVG illustration
+            try:
+                svg_data_url = self.svg_generator.generate_svg(recommendation_data)
+                recommendation_data["image_url"] = svg_data_url
+                recommendation_data["illustration_prompt"] = f"SVG illustration for {template['title']} - {rec_type.value}"
+            except Exception as svg_error:
+                logger.warning(f"Failed to generate SVG for recommendation: {svg_error}")
+                # Continue without SVG - will fall back to default images
+
+            return recommendation_data
+
         except Exception as e:
             logger.error(f"Error creating recommendation: {e}")
             return None

@@ -12,6 +12,7 @@ from .analytics import (
     ConversationAnalytics,
     UserProgressMetrics
 )
+from .trauma_mapping import LifeEvent, TraumaMapping, ReframeSession
 
 __all__ = [
     "User",
@@ -27,5 +28,8 @@ __all__ = [
     "MoodTrendType",
     "ProgressInsight",
     "ConversationAnalytics",
-    "UserProgressMetrics"
+    "UserProgressMetrics",
+    "LifeEvent",
+    "TraumaMapping",
+    "ReframeSession"
 ]

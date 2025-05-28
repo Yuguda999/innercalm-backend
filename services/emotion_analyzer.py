@@ -20,13 +20,15 @@ class EmotionAnalyzer:
     def __init__(self, model_name: str = "j-hartmann/emotion-english-distilroberta-base"):
         # Initialize the HF pipeline for emotion classification
         try:
+            # Force CPU usage to avoid CUDA memory issues
             self.classifier = pipeline(
                 "text-classification",
                 model=model_name,
                 return_all_scores=True,    # get scores for all labels
-                top_k=None                 # include every label in the output
+                top_k=None,                # include every label in the output
+                device=-1                  # Force CPU usage
             )
-            logger.info(f"Loaded emotion classifier: {model_name}")
+            logger.info(f"Loaded emotion classifier: {model_name} (using CPU)")
         except Exception as e:
             logger.error(f"Failed to load emotion classifier: {e}")
             raise
@@ -47,6 +49,17 @@ class EmotionAnalyzer:
             "trauma", "ptsd", "flashback", "nightmare", "trigger", "abuse", "violence",
             "suicide", "self-harm"
         ]
+
+        # Emotion keywords for pattern detection
+        self.emotion_keywords = {
+            "joy": ["happy", "joy", "excited", "pleased", "content"],
+            "sadness": ["sad", "depressed", "down", "melancholy", "grief"],
+            "anger": ["angry", "mad", "furious", "irritated", "rage"],
+            "fear": ["afraid", "scared", "anxious", "worried", "panic"],
+            "surprise": ["surprised", "shocked", "amazed", "astonished"],
+            "disgust": ["disgusted", "revolted", "repulsed", "sick"],
+            "neutral": ["neutral", "calm", "okay", "fine"]
+        }
 
     def analyze_emotion(self, text: str, user_id: int, message_id: Optional[int] = None) -> Dict:
         """

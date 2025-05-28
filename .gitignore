@@ -110,6 +110,8 @@ ENV/
 env.bak/
 venv.bak/
 new_venv/
+.env.backup
+.env.production
 
 # Spyder project settings
 .spyderproject

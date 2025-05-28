@@ -34,6 +34,11 @@ class User(Base):
     conversation_analytics = relationship("ConversationAnalytics", back_populates="user", cascade="all, delete-orphan")
     progress_metrics = relationship("UserProgressMetrics", back_populates="user", cascade="all, delete-orphan")
 
+    # Trauma mapping relationships
+    life_events = relationship("LifeEvent", cascade="all, delete-orphan")
+    trauma_mappings = relationship("TraumaMapping", cascade="all, delete-orphan")
+    reframe_sessions = relationship("ReframeSession", cascade="all, delete-orphan")
+
     def __repr__(self):
         return f"<User(id={self.id}, username='{self.username}', email='{self.email}')>"
 

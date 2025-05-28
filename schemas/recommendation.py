@@ -16,6 +16,9 @@ class RecommendationBase(BaseModel):
     target_emotions: List[str]
     difficulty_level: int = Field(..., ge=1, le=5)
     estimated_duration: Optional[int] = Field(None, ge=1, le=120)  # minutes
+    image_url: Optional[str] = None
+    gif_url: Optional[str] = None
+    illustration_prompt: Optional[str] = None
 
 
 class RecommendationCreate(RecommendationBase):
@@ -39,7 +42,10 @@ class RecommendationResponse(RecommendationBase):
     notes: Optional[str] = None
     created_at: datetime
     completed_at: Optional[datetime] = None
-    
+    image_url: Optional[str] = None
+    gif_url: Optional[str] = None
+    illustration_prompt: Optional[str] = None
+
     class Config:
         from_attributes = True
 

@@ -17,7 +17,7 @@ from typing_extensions import TypedDict, Annotated
 
 from models.trauma_mapping import LifeEvent, TraumaMapping, ReframeSession, EventType, EventCategory
 from models.emotion import EmotionAnalysis
-from services.emotion_analyzer import EmotionAnalyzer
+from services.emotion_analyzer import get_emotion_analyzer
 from config import settings
 
 logger = logging.getLogger(__name__)
@@ -42,7 +42,7 @@ class TraumaMappingService:
     """Agentic trauma mapping service using LangGraph for intelligent analysis."""
 
     def __init__(self):
-        self.emotion_analyzer = EmotionAnalyzer()
+        self.emotion_analyzer = None  # Lazy loaded
         self.llm = ChatOpenAI(
             model=settings.openai_model,
             api_key=settings.openai_api_key,

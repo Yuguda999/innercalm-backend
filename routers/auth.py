@@ -7,7 +7,7 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
 from database import get_db
-from schemas.user import UserCreate, UserResponse, Token, TokenData
+from schemas.user import UserCreate, UserResponse, Token, TokenData, TherapistRegistration
 from services.auth_service import AuthService
 from models.user import User
 
@@ -107,6 +107,32 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = 
 async def get_current_user_info(current_user: User = Depends(get_current_active_user)):
     """Get current user information."""
     return current_user
+
+
+@router.post("/register-therapist", response_model=Token, status_code=status.HTTP_201_CREATED)
+async def register_therapist(therapist_data: TherapistRegistration, db: Session = Depends(get_db)):
+    """Register a new therapist and return access token."""
+    try:
+        user = AuthService.create_therapist(db, therapist_data)
+
+        # Create access token for the new therapist
+        access_token = AuthService.create_access_token(data={"sub": user.username})
+
+        return Token(
+            access_token=access_token,
+            token_type="bearer",
+            user=UserResponse.model_validate(user)
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to create therapist account"
+        )
 
 
 @router.post("/logout")

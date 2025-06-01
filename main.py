@@ -18,8 +18,18 @@ from routers import (
     recommendations_router,
     users_router,
     analytics_router,
-    trauma_mapping_router
+    trauma_mapping_router,
+    inner_ally_router,
+    professional_bridge_router,
+    therapist_router,
+    community_router,
+    moderation_router,
+    notifications_router
 )
+from routers.voice_journal import router as voice_journal_router
+from routers.emotion_art import router as emotion_art_router
+from routers.websocket import router as websocket_router
+from api.voice_analysis import router as voice_analysis_router
 
 # Configure logging
 logging.basicConfig(
@@ -36,11 +46,25 @@ async def lifespan(app: FastAPI):
     logger.info("Starting InnerCalm API...")
     try:
         # Import all models to ensure they're registered
-        from models import user, conversation, emotion, recommendation, analytics, trauma_mapping
+        from models import user, conversation, emotion, recommendation, analytics, trauma_mapping, user_memory, agent_persona, professional_bridge, community, voice_journal, emotion_art
 
         # Create database tables
         create_tables()
         logger.info("Database tables created successfully")
+
+        # Optionally preload emotion model for faster first-time usage
+        if settings.preload_emotion_model:
+            logger.info("Preloading emotion analysis model...")
+            from services.emotion_analyzer import preload_emotion_analyzer
+            preload_emotion_analyzer()
+        else:
+            logger.info("Emotion model will be loaded on first use (set PRELOAD_EMOTION_MODEL=true to preload)")
+
+        # Start AI group management scheduler
+        logger.info("Starting AI group management scheduler...")
+        from services.scheduler import scheduler
+        await scheduler.start()
+
         yield
     except Exception as e:
         logger.error(f"Failed to initialize application: {e}")
@@ -48,6 +72,14 @@ async def lifespan(app: FastAPI):
     finally:
         # Shutdown
         logger.info("Shutting down InnerCalm API...")
+
+        # Stop scheduler
+        try:
+            from services.scheduler import scheduler
+            await scheduler.stop()
+        except Exception as e:
+            logger.error(f"Error stopping scheduler: {e}")
+
         engine.dispose()
 
 
@@ -119,13 +151,23 @@ async def root():
 
 
 # Include routers
-app.include_router(auth_router)
-app.include_router(chat_router)
-app.include_router(emotions_router)
-app.include_router(recommendations_router)
-app.include_router(users_router)
-app.include_router(analytics_router)
-app.include_router(trauma_mapping_router)
+app.include_router(auth_router, prefix="/api")
+app.include_router(chat_router, prefix="/api")
+app.include_router(emotions_router, prefix="/api")
+app.include_router(recommendations_router, prefix="/api")
+app.include_router(users_router, prefix="/api")
+app.include_router(analytics_router, prefix="/api")
+app.include_router(trauma_mapping_router, prefix="/api")
+app.include_router(inner_ally_router, prefix="/api")
+app.include_router(professional_bridge_router, prefix="/api")
+app.include_router(therapist_router, prefix="/api")
+app.include_router(community_router, prefix="/api")
+app.include_router(moderation_router, prefix="/api")
+app.include_router(notifications_router, prefix="/api")
+app.include_router(voice_journal_router, prefix="/api")
+app.include_router(emotion_art_router, prefix="/api")
+app.include_router(websocket_router, prefix="/api")
+app.include_router(voice_analysis_router, prefix="/api")
 
 
 # Request logging middleware

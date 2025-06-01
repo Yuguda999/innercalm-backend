@@ -236,7 +236,15 @@ async def get_user_preferences(
             recommendations=preferences.recommendations,
             achievements=preferences.achievements,
             language=preferences.language,
-            timezone=preferences.timezone
+            timezone=preferences.timezone,
+            agent_persona=preferences.agent_persona,
+            custom_persona_name=preferences.custom_persona_name,
+            custom_persona_description=preferences.custom_persona_description,
+            favorite_affirmations=preferences.favorite_affirmations.split(',') if preferences.favorite_affirmations else None,
+            preferred_coping_styles=preferences.preferred_coping_styles.split(',') if preferences.preferred_coping_styles else None,
+            crisis_contact_enabled=preferences.crisis_contact_enabled,
+            widget_enabled=preferences.widget_enabled,
+            micro_checkin_frequency=preferences.micro_checkin_frequency
         )
 
     except Exception as e:
@@ -266,6 +274,9 @@ async def update_user_preferences(
         # Update fields
         update_dict = preferences_data.model_dump(exclude_unset=True)
         for field, value in update_dict.items():
+            # Convert list fields to comma-separated strings for database storage
+            if field in ['favorite_affirmations', 'preferred_coping_styles'] and isinstance(value, list):
+                value = ','.join(value) if value else None
             setattr(preferences, field, value)
 
         db.commit()
@@ -278,7 +289,15 @@ async def update_user_preferences(
             recommendations=preferences.recommendations,
             achievements=preferences.achievements,
             language=preferences.language,
-            timezone=preferences.timezone
+            timezone=preferences.timezone,
+            agent_persona=preferences.agent_persona,
+            custom_persona_name=preferences.custom_persona_name,
+            custom_persona_description=preferences.custom_persona_description,
+            favorite_affirmations=preferences.favorite_affirmations.split(',') if preferences.favorite_affirmations else None,
+            preferred_coping_styles=preferences.preferred_coping_styles.split(',') if preferences.preferred_coping_styles else None,
+            crisis_contact_enabled=preferences.crisis_contact_enabled,
+            widget_enabled=preferences.widget_enabled,
+            micro_checkin_frequency=preferences.micro_checkin_frequency
         )
 
     except Exception as e:

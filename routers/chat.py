@@ -19,7 +19,7 @@ from schemas.conversation import (
     ChatRequest, ChatResponse, MessageResponse
 )
 from services.ai_chat import AIChat
-from services.emotion_analyzer import EmotionAnalyzer
+from services.emotion_analyzer import get_emotion_analyzer
 from services.analytics_service import AnalyticsService
 from models.analytics import AnalyticsEventType
 
@@ -27,7 +27,6 @@ router = APIRouter(prefix="/chat", tags=["chat"])
 
 # Initialize services
 ai_chat = AIChat()
-emotion_analyzer = EmotionAnalyzer()
 analytics_service = AnalyticsService()
 
 
@@ -73,6 +72,7 @@ async def send_message(
         db.refresh(user_message)
 
         # Analyze emotion in user message
+        emotion_analyzer = get_emotion_analyzer()
         emotion_analysis = emotion_analyzer.analyze_emotion(
             chat_request.message,
             current_user.id,
@@ -233,6 +233,7 @@ async def stream_message(
             db.refresh(user_message)
 
             # Analyze emotion in user message
+            emotion_analyzer = get_emotion_analyzer()
             emotion_analysis = emotion_analyzer.analyze_emotion(
                 chat_request.message,
                 current_user.id,

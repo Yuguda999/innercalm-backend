@@ -14,9 +14,11 @@ from models.analytics import (
     ConversationAnalytics, UserProgressMetrics
 )
 from services.analytics_service import AnalyticsService
+from services.community_analytics import CommunityAnalyticsService
 
 router = APIRouter(prefix="/analytics", tags=["analytics"])
 analytics_service = AnalyticsService()
+community_analytics_service = CommunityAnalyticsService()
 
 
 @router.get("/dashboard", response_model=Dict[str, Any])
@@ -403,4 +405,61 @@ async def get_conversation_analytics(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to get conversation analytics: {str(e)}"
+        )
+
+
+@router.get("/community-dashboard", response_model=Dict[str, Any])
+async def get_community_analytics_dashboard(
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+    days_back: int = Query(30, ge=1, le=90)
+):
+    """Get community analytics dashboard."""
+    try:
+        dashboard_data = await community_analytics_service.get_community_dashboard(
+            db, current_user.id, days_back
+        )
+        return dashboard_data
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get community analytics: {str(e)}"
+        )
+
+
+@router.get("/community-engagement", response_model=Dict[str, Any])
+async def get_community_engagement_metrics(
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+    period: str = Query("week", regex="^(day|week|month)$")
+):
+    """Get community engagement metrics."""
+    try:
+        metrics = await community_analytics_service.get_engagement_metrics(
+            db, current_user.id, period
+        )
+        return metrics
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get engagement metrics: {str(e)}"
+        )
+
+
+@router.get("/real-time-stats", response_model=Dict[str, Any])
+async def get_real_time_community_stats(
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Get real-time community statistics."""
+    try:
+        stats = await community_analytics_service.get_real_time_stats(db)
+        return stats
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get real-time stats: {str(e)}"
         )

@@ -22,6 +22,10 @@ class Settings(BaseSettings):
     openai_api_key: str = Field(..., env="OPENAI_API_KEY")
     openai_model: str = Field(default="gpt-4", env="OPENAI_MODEL")
 
+    # Hume AI Configuration
+    hume_api_key: str = Field(..., env="HUME_API_KEY")
+    hume_secret_key: Optional[str] = Field(default=None, env="HUME_SECRET_KEY")
+
     # Security Configuration
     secret_key: str = Field(default="your-secret-key-change-in-production", env="SECRET_KEY")
     algorithm: str = Field(default="HS256", env="ALGORITHM")
@@ -30,6 +34,7 @@ class Settings(BaseSettings):
     # AI Configuration
     max_conversation_history: int = Field(default=20, env="MAX_CONVERSATION_HISTORY")
     emotion_analysis_threshold: float = Field(default=0.5, env="EMOTION_ANALYSIS_THRESHOLD")
+    preload_emotion_model: bool = Field(default=False, env="PRELOAD_EMOTION_MODEL")
 
     class Config:
         env_file = ".env"

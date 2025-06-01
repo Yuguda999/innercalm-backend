@@ -11,6 +11,7 @@ psycopg2-binary==2.9.9
 # Authentication and security
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
+websockets==11.0.3
 
 # Configuration
 python-dotenv==1.0.0
@@ -39,6 +40,11 @@ pandas>=2.0.0
 
 # HTTP client
 httpx>=0.25.0
+
+# Audio processing for voice journaling
+SpeechRecognition>=3.10.0
+pydub>=0.25.1
+pyaudio>=0.2.11
 
 # Testing (optional for production)
 pytest>=7.4.0

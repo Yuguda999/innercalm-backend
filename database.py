@@ -13,11 +13,15 @@ from config import settings
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Create SQLAlchemy engine
+# Create SQLAlchemy engine with increased connection pool
 engine = create_engine(
     settings.database_url,
     connect_args={"check_same_thread": False} if "sqlite" in settings.database_url else {},
-    echo=settings.debug
+    echo=settings.debug,
+    pool_size=20,  # Increase pool size for WebSocket connections
+    max_overflow=30,  # Allow more overflow connections
+    pool_timeout=60,  # Increase timeout
+    pool_recycle=3600  # Recycle connections every hour
 )
 
 # Create SessionLocal class

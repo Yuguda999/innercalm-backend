@@ -47,6 +47,14 @@ class AIChat:
         )
         self.workflow = self._create_workflow()
 
+        # Initialize Inner Ally agent for personalization
+        try:
+            from services.inner_ally import InnerAllyAgent
+            self.inner_ally = InnerAllyAgent()
+        except ImportError:
+            logger.warning("Inner Ally agent not available")
+            self.inner_ally = None
+
         # Enhanced therapeutic approaches with detailed configurations
         self.therapeutic_approaches = {
             "cognitive_behavioral": {
@@ -152,6 +160,16 @@ class AIChat:
             # Get conversation history
             conversation_history = self._get_conversation_history(db, conversation_id) if conversation_id else []
 
+            # Get user persona and longitudinal context if Inner Ally is available
+            user_persona = {}
+            longitudinal_context = {}
+            if self.inner_ally:
+                try:
+                    user_persona = self.inner_ally.get_user_persona(user_id, db)
+                    longitudinal_context = self.inner_ally.get_longitudinal_context(user_id, db)
+                except Exception as e:
+                    logger.warning(f"Could not load Inner Ally context: {e}")
+
             # Prepare enhanced initial state
             initial_state = ChatState(
                 messages=conversation_history + [HumanMessage(content=user_message)],
@@ -165,7 +183,9 @@ class AIChat:
                 session_context={
                     "db": db,
                     "timestamp": datetime.now(),
-                    "message_count": len(conversation_history) + 1
+                    "message_count": len(conversation_history) + 1,
+                    "user_persona": user_persona,
+                    "longitudinal_context": longitudinal_context
                 },
                 user_preferences={},
                 conversation_stage="exploration"

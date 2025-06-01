@@ -8,8 +8,9 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 
-from models.user import User
-from schemas.user import UserCreate, TokenData
+from models.user import User, UserType
+from models.professional_bridge import TherapistProfile
+from schemas.user import UserCreate, TokenData, TherapistRegistration
 from config import settings
 
 logger = logging.getLogger(__name__)
@@ -74,9 +75,13 @@ class AuthService:
     
     @staticmethod
     def authenticate_user(db: Session, username: str, password: str) -> Optional[User]:
-        """Authenticate a user with username and password."""
+        """Authenticate a user with username or email and password."""
         try:
+            # Try to find user by username first, then by email
             user = db.query(User).filter(User.username == username).first()
+            if not user:
+                user = db.query(User).filter(User.email == username).first()
+
             if not user:
                 return None
             if not AuthService.verify_password(password, user.hashed_password):
@@ -149,6 +154,78 @@ class AuthService:
         except Exception as e:
             logger.error(f"Error updating user activity: {e}")
             db.rollback()
+
+    @staticmethod
+    def create_therapist(db: Session, therapist_data: TherapistRegistration) -> User:
+        """Create a new therapist user with profile."""
+        try:
+            # Check if user already exists
+            existing_user = db.query(User).filter(
+                (User.email == therapist_data.email) |
+                (User.username == therapist_data.username)
+            ).first()
+            if existing_user:
+                raise ValueError("User with this email or username already exists")
+
+            # Check if license number already exists
+            existing_license = db.query(TherapistProfile).filter(
+                TherapistProfile.license_number == therapist_data.license_number
+            ).first()
+            if existing_license:
+                raise ValueError("Therapist with this license number already exists")
+
+            # Create user
+            hashed_password = AuthService.get_password_hash(therapist_data.password)
+            user = User(
+                email=therapist_data.email,
+                username=therapist_data.username,
+                hashed_password=hashed_password,
+                full_name=therapist_data.full_name,
+                user_type=UserType.THERAPIST,
+                is_verified=False  # Therapists need verification
+            )
+            db.add(user)
+            db.flush()  # Get user ID
+
+            # Create therapist profile
+            therapist_profile = TherapistProfile(
+                user_id=user.id,
+                full_name=therapist_data.full_name,
+                email=therapist_data.email,
+                phone=therapist_data.phone,
+                license_number=therapist_data.license_number,
+                credentials=therapist_data.credentials,
+                specialties=[specialty.value for specialty in therapist_data.specialties],
+                years_experience=therapist_data.years_experience,
+                bio=therapist_data.bio,
+                hourly_rate=therapist_data.hourly_rate,
+                accepts_insurance=therapist_data.accepts_insurance,
+                insurance_providers=therapist_data.insurance_providers or [],
+                availability_schedule={
+                    "monday": {"available": False, "hours": []},
+                    "tuesday": {"available": False, "hours": []},
+                    "wednesday": {"available": False, "hours": []},
+                    "thursday": {"available": False, "hours": []},
+                    "friday": {"available": False, "hours": []},
+                    "saturday": {"available": False, "hours": []},
+                    "sunday": {"available": False, "hours": []}
+                },  # Default empty schedule
+                timezone=therapist_data.timezone,
+                is_verified=False,
+                is_accepting_new_clients=False  # Until verified
+            )
+            db.add(therapist_profile)
+            db.commit()
+            db.refresh(user)
+
+            return user
+        except ValueError:
+            db.rollback()
+            raise
+        except Exception as e:
+            logger.error(f"Error creating therapist: {e}")
+            db.rollback()
+            raise ValueError("Failed to create therapist account")
     
     @staticmethod
     def deactivate_user(db: Session, user_id: int) -> bool:

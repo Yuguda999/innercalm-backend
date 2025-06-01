@@ -7,6 +7,9 @@ from transformers import pipeline
 import re
 from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
+import os
+import time
+from pathlib import Path
 
 from models.emotion import EmotionAnalysis, EmotionPattern
 from config import settings
@@ -17,20 +20,58 @@ logger = logging.getLogger(__name__)
 class EmotionAnalyzer:
     """Service for analyzing emotions in text using a pretrained DistilRoBERTa."""
 
-    def __init__(self, model_name: str = "j-hartmann/emotion-english-distilroberta-base"):
-        # Initialize the HF pipeline for emotion classification
+    _instance = None
+    _classifier = None
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super(EmotionAnalyzer, cls).__new__(cls)
+        return cls._instance
+
+    def __init__(self, model_name: str = "j-hartmann/emotion-english-distilroberta-base", preload: bool = False):
+        # Only initialize once
+        if self._classifier is not None:
+            return
+
+        self.model_name = model_name
+        self.model_cache_dir = Path.home() / ".cache" / "innercalm" / "models"
+        self.model_cache_dir.mkdir(parents=True, exist_ok=True)
+
+        if preload:
+            self._load_model()
+
+    def _load_model(self):
+        """Load the emotion classification model with caching and progress tracking."""
+        if self._classifier is not None:
+            return
+
         try:
+            start_time = time.time()
+            logger.info(f"Loading emotion classifier: {self.model_name}")
+            print(f"🧠 Loading emotion analysis model... (this may take 10-30 seconds on first run)")
+
+            # Set cache directory for model downloads
+            os.environ['TRANSFORMERS_CACHE'] = str(self.model_cache_dir)
+
             # Force CPU usage to avoid CUDA memory issues
-            self.classifier = pipeline(
+            os.environ['CUDA_VISIBLE_DEVICES'] = ''  # Disable CUDA completely
+            print("Device set to use cpu")
+
+            self._classifier = pipeline(
                 "text-classification",
-                model=model_name,
+                model=self.model_name,
                 return_all_scores=True,    # get scores for all labels
                 top_k=None,                # include every label in the output
                 device=-1                  # Force CPU usage
             )
-            logger.info(f"Loaded emotion classifier: {model_name} (using CPU)")
+
+            load_time = time.time() - start_time
+            logger.info(f"✅ Emotion classifier loaded successfully in {load_time:.2f}s (using CPU)")
+            print(f"✅ Model loaded in {load_time:.2f} seconds")
+
         except Exception as e:
-            logger.error(f"Failed to load emotion classifier: {e}")
+            logger.error(f"❌ Failed to load emotion classifier: {e}")
+            print(f"❌ Failed to load emotion model: {e}")
             raise
 
         # Map HF labels to our database fields
@@ -60,6 +101,13 @@ class EmotionAnalyzer:
             "disgust": ["disgusted", "revolted", "repulsed", "sick"],
             "neutral": ["neutral", "calm", "okay", "fine"]
         }
+
+    @property
+    def classifier(self):
+        """Get the classifier, loading it if necessary."""
+        if self._classifier is None:
+            self._load_model()
+        return self._classifier
 
     def analyze_emotion(self, text: str, user_id: int, message_id: Optional[int] = None) -> Dict:
         """
@@ -238,3 +286,22 @@ class EmotionAnalyzer:
         except Exception as e:
             logger.error(f"Error detecting patterns: {e}")
             return []
+
+
+# Global instance - lazy loaded
+_emotion_analyzer = None
+
+def get_emotion_analyzer(preload: bool = False):
+    """Get the global emotion analyzer instance (lazy loaded)."""
+    global _emotion_analyzer
+    if _emotion_analyzer is None:
+        _emotion_analyzer = EmotionAnalyzer(preload=preload)
+    return _emotion_analyzer
+
+def preload_emotion_analyzer():
+    """Preload the emotion analyzer model for faster first-time usage."""
+    logger.info("Preloading emotion analyzer...")
+    analyzer = get_emotion_analyzer(preload=True)
+    # Trigger model loading by accessing classifier
+    _ = analyzer.classifier
+    logger.info("Emotion analyzer preloaded successfully")
